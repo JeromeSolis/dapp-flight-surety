@@ -33,11 +33,10 @@ contract FlightSuretyApp {
         uint256 updatedTimestamp;        
         address airline;
     }
-
     
     mapping(bytes32 => Flight) private flights;
 
-    bool private operational = isOperational();
+    bool private operational;
 
  
     /********************************************************************************************/
@@ -77,6 +76,7 @@ contract FlightSuretyApp {
     constructor(address _dataContract) public {
         contractOwner = msg.sender;
         flightSuretyData = FlightSuretyData(_dataContract);
+        operational = isOperational();
     }
 
     /********************************************************************************************/
@@ -263,4 +263,8 @@ contract FlightSuretyApp {
 contract FlightSuretyData {
     function isOperational() public view returns(bool);
     function registerAirline(address _account) external;
+    function buy(uint256 _flightKey) external payable;
+    function creditInsurees(address _account) external;
+    function pay(address _account, uint256 _amount) external payable;
+    function fund() public payable;
 }

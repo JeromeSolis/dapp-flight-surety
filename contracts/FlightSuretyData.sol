@@ -9,7 +9,7 @@ contract FlightSuretyData {
     /*                                       DATA VARIABLES                                     */
     /********************************************************************************************/
 
-    address private contractOwner;                                      // Account used to deploy contract
+    address private contractOwner;                               // Account used to deploy contract
     bool private operational;                                    // Blocks all state changes throughout the contract if false
     
     uint256 private airlinesThreshold;
@@ -29,8 +29,22 @@ contract FlightSuretyData {
         address owner;
     }
 
+    struct Passenger {
+        uint256 balance; 
+        address wallet;
+    }
+
+    struct Flight {
+        string flight;
+        bytes32 key;
+        address airline;
+        uint256 flightTimestamp;
+        uint8 flightStatus;
+    }
+
     mapping(address => Airline) private airlines;
     mapping(address => Insurance) private insurances;
+    mapping(bytes32 => Flight) private flights;
 
     uint256 private registrationFee;
     uint256 private insuranceFee;
@@ -49,13 +63,13 @@ contract FlightSuretyData {
         operational = true;
         airlinesCount = 0;
         
+        airlinesCount = airlinesCount.add(1);
         airlines[contractOwner] = Airline({isRegistered: true, isAdmin: true, isVoter: true});
-        airlinesCount = 1;
         
         registrationFee = 25 ether;
         insuranceFee = 1 ether;
 
-        address(this).transfer(msg.value); // Fund contract upon creation
+        // address(this).transfer(msg.value); // Fund contract upon creation
     }
 
     /********************************************************************************************/
@@ -135,15 +149,14 @@ contract FlightSuretyData {
         require(airlines[msg.sender].isRegistered, "Caller not registered");
 
         if (airlinesCount <= airlinesThreshold) {
+            airlinesCount = airlinesCount.add(1);
             airlines[_account] = Airline({
                 isRegistered: true,
                 isAdmin: true,
                 isVoter: true
             });
-            airlinesCount = airlinesCount.add(1);
         } else {
             bool isDuplicate = false;
-
             for (uint256 i=0; i<airlinesCount; i++) {
                 if (votesRegister[i] == msg.sender) {
                     isDuplicate = true;
@@ -154,12 +167,12 @@ contract FlightSuretyData {
 
             votesRegister.push(msg.sender);
             if (votesRegister.length >= airlinesCount.div(2)) {
+                airlinesCount = airlinesCount.add(1);
                 airlines[_account] = Airline({
                     isRegistered: true,
                     isAdmin: false,
                     isVoter: false
                 });
-                airlinesCount = airlinesCount.add(1);
                 votesRegister = new address[](0);
             }
         }
@@ -169,12 +182,12 @@ contract FlightSuretyData {
     * @dev Buy insurance for a flight
     *
     */   
-    function buy(uint256 _flightId) external payable {
+    function buy(uint256 _flightKey) external payable requireIsOperational {
         require(msg.value <= insuranceFee, "Value of insurance too high");
 
         address(this).transfer(msg.value);
         insurances[msg.sender] = Insurance({
-            flightId: _flightId,
+            flightId: _flightKey,
             amountPaid: msg.value,
             owner: msg.sender
         });
@@ -183,16 +196,18 @@ contract FlightSuretyData {
     /**
      *  @dev Credits payouts to insurees
     */
-    function creditInsurees() external pure {
-
+    function creditInsurees(address _account) external requireIsOperational {
+        uint256 amountPaid = insurances[_account].amountPaid;
+        uint256 insuranceToPay = amountPaid.mul(15).div(10);
+        insurances[_account].amountPaid = 0;
     }
     
     /**
      *  @dev Transfers eligible payout funds to insuree
      *
     */
-    function pay() external pure {
-        
+    function pay(address _account, uint256 _amount) external payable requireIsOperational {
+        _account.transfer(_amount);
     }
 
    /**
@@ -200,7 +215,7 @@ contract FlightSuretyData {
     *      resulting in insurance payouts, the contract should be self-sustaining
     *
     */   
-    function fund() public payable {
+    function fund() public payable requireIsOperational {
         require(msg.value >= registrationFee, "Insufficiant funds");
         require(airlines[msg.sender].isRegistered, "Airline not yet registered");
         require(!airlines[msg.sender].isVoter, "Airline is already a voter");
