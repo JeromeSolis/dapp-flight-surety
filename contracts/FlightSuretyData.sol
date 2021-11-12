@@ -12,31 +12,29 @@ contract FlightSuretyData {
     address private contractOwner;                               // Account used to deploy contract
     bool private operational;                                    // Blocks all state changes throughout the contract if false
     
-    uint256 private airlinesThreshold;
-    uint256 private airlinesCount;
-    address[] votesRegister = new address[](0);
-    address[] votesOperational = new address[](0);
+    uint256 private airlineThreshold;
+    uint256 private airlineCount;
+    address[] votes = new address[](0);
+    // address[] votesOperational = new address[](0);
 
     struct Airline {
         bool isRegistered;
-        bool isAdmin;
         bool isVoter;
     }
 
     struct Insurance {
-        uint256 flightId;
+        bytes32 flightId;
         uint256 amountPaid;
         address owner;
     }
 
-    struct Passenger {
-        uint256 balance; 
-        address wallet;
+    struct Caller {
+        bool isAuthorized; 
     }
 
     struct Flight {
+        bool isRegistered;
         string flight;
-        bytes32 key;
         address airline;
         uint256 flightTimestamp;
         uint8 flightStatus;
@@ -45,9 +43,10 @@ contract FlightSuretyData {
     mapping(address => Airline) private airlines;
     mapping(address => Insurance) private insurances;
     mapping(bytes32 => Flight) private flights;
+    mapping(address => Caller) private callers;
 
-    uint256 private registrationFee;
-    uint256 private insuranceFee;
+    uint256 private constant FEE_AIRLINE_REGISTRATION = 10 ether;
+    uint256 private constant MAX_INSURANCE_POLICY = 1 ether;
 
     /********************************************************************************************/
     /*                                       EVENT DEFINITIONS                                  */
@@ -61,15 +60,10 @@ contract FlightSuretyData {
     constructor() public payable {
         contractOwner = msg.sender;
         operational = true;
-        airlinesCount = 0;
+        airlineCount = 0;
         
-        airlinesCount = airlinesCount.add(1);
-        airlines[contractOwner] = Airline({isRegistered: true, isAdmin: true, isVoter: true});
-        
-        registrationFee = 25 ether;
-        insuranceFee = 1 ether;
-
-        // address(this).transfer(msg.value); // Fund contract upon creation
+        callers[address(this)].isAuthorized = true;
+        callers[contractOwner].isAuthorized = true;
     }
 
     /********************************************************************************************/
@@ -97,6 +91,12 @@ contract FlightSuretyData {
         _;
     }
 
+    modifier requireAuthorizedCaller() {
+        require(callers[msg.sender].isAuthorized, "Caller is not authorized");
+        _;
+    }
+    
+
     /********************************************************************************************/
     /*                                       UTILITY FUNCTIONS                                  */
     /********************************************************************************************/
@@ -110,30 +110,37 @@ contract FlightSuretyData {
         return operational;
     }
 
-
-    /**
+     /**
     * @dev Sets contract operations on/off
     *
     * When operational mode is disabled, all write transactions except for this one will fail
-    */    
+    */
+
+    // Contracts functions
+
     function setOperatingStatus(bool _mode) external requireContractOwner {
-        require(_mode != operational, "No change in mode detected");
-        require(airlines[msg.sender].isAdmin, "Caller is not an admin");
+        // require(_mode != operational, "No change in mode detected");
+        // require(airlines[msg.sender].isAdmin, "Caller is not an admin");
 
-        bool isDuplicate = false;
-        for(uint256 i=0; i<votesOperational.length; i++) {
-            if (votesOperational[i] == msg.sender) {
-                isDuplicate = true;
-                break;
-            }
-        }
-        require(!isDuplicate, "Caller has already called this function.");
+        // bool isDuplicate = false;
+        // for(uint256 i=0; i<votesOperational.length; i++) {
+        //     if (votesOperational[i] == msg.sender) {
+        //         isDuplicate = true;
+        //         break;
+        //     }
+        // }
+        // require(!isDuplicate, "Caller has already called this function.");
 
-        votesOperational.push(msg.sender);
-        if (votesOperational.length >= airlinesThreshold.sub(1)) {
-            operational = _mode;      
-            votesOperational = new address[](0);      
-        }
+        // votesOperational.push(msg.sender);
+        // if (votesOperational.length >= airlineThreshold.sub(1)) {
+        //     operational = _mode;      
+        //     votesOperational = new address[](0);      
+        // }
+        operational = _mode;
+    }
+
+    function authorizeCaller(address _contractAddress, bool _status) external requireContractOwner requireIsOperational {
+        callers[_contractAddress].isAuthorized = _status;
     }
 
     /********************************************************************************************/
@@ -144,46 +151,70 @@ contract FlightSuretyData {
     * @dev Add an airline to the registration queue
     *      Can only be called from FlightSuretyApp contract
     *
-    */   
-    function registerAirline(address _account) external requireIsOperational {
-        require(airlines[msg.sender].isRegistered, "Caller not registered");
+    */
+    
+    // Airline functions
 
-        if (airlinesCount <= airlinesThreshold) {
-            airlinesCount = airlinesCount.add(1);
-            airlines[_account] = Airline({
-                isRegistered: true,
-                isAdmin: true,
-                isVoter: true
-            });
-        } else {
-            bool isDuplicate = false;
-            for (uint256 i=0; i<airlinesCount; i++) {
-                if (votesRegister[i] == msg.sender) {
-                    isDuplicate = true;
-                    break;
-                }
-            }
-            require(!isDuplicate, "Caller has already called this function.");
-
-            votesRegister.push(msg.sender);
-            if (votesRegister.length >= airlinesCount.div(2)) {
-                airlinesCount = airlinesCount.add(1);
-                airlines[_account] = Airline({
-                    isRegistered: true,
-                    isAdmin: false,
-                    isVoter: false
-                });
-                votesRegister = new address[](0);
-            }
-        }
+    function isAirline(address _address) public view returns(bool) {
+        return airlines[_address].isVoter;
     }
 
+    function isRegisteredAirline(address _address) public view returns(bool) {
+        return airlines[_address].isRegistered;
+    }
+
+    function getRegistrationFee() public pure returns(uint256) {
+        return FEE_AIRLINE_REGISTRATION;
+    }
+
+    function getAirlineCount() public view returns(uint256) {
+        return airlineCount;
+    }
+
+    function registerAirline(address _airline) external requireIsOperational requireAuthorizedCaller {
+        airlines[_airline].isRegistered = true;
+        airlines[_airline].isVoter = false;
+        airlineCount = airlineCount.add(1);
+    }
+
+    // Flight functions
+
+    function isRegisteredFlight(bytes32 _key) public view returns(bool) {
+        return flights[_key].isRegistered;
+    }
+
+    function getFlight(bytes32 _key) public view returns(bool, string, address, uint256, uint8) {
+        return (flights[_key].isRegistered, flights[_key].flight, flights[_key].airline, flights[_key].flightTimestamp, flights[_key].flightStatus);
+    }
+
+    function registerFlight(address _airline, string _flight, uint256 _timestamp, uint8 _status) external requireIsOperational requireAuthorizedCaller {
+        bytes32 key = getFlightKey(_airline, _flight, _timestamp);
+        flights[key] = Flight({
+            isRegistered: true,
+            flight: _flight,
+            airline: _airline,
+            flightTimestamp: _timestamp,
+            flightStatus: _status
+        });
+    }
+
+
+    // Insurance functions
    /**
     * @dev Buy insurance for a flight
     *
-    */   
-    function buy(uint256 _flightKey) external payable requireIsOperational {
-        require(msg.value <= insuranceFee, "Value of insurance too high");
+    */
+
+    function registerInsurance(bytes32 _flightKey, uint256 _amount, address _owner) external requireIsOperational requireAuthorizedCaller {
+        insurances[msg.sender] = Insurance({
+            flightId: _flightKey,
+            amountPaid: _amount,
+            owner: _owner
+        });
+    }
+
+    function buy(bytes32 _flightKey) external payable requireIsOperational {
+        require(msg.value <= MAX_INSURANCE_POLICY, "Value of insurance too high");
 
         address(this).transfer(msg.value);
         insurances[msg.sender] = Insurance({
@@ -216,9 +247,9 @@ contract FlightSuretyData {
     *
     */   
     function fund() public payable requireIsOperational {
-        require(msg.value >= registrationFee, "Insufficiant funds");
+        require(msg.value >= FEE_AIRLINE_REGISTRATION, "Insufficiant funds");
         require(airlines[msg.sender].isRegistered, "Airline not yet registered");
-        require(!airlines[msg.sender].isVoter, "Airline is already a voter");
+        // require(!airlines[msg.sender].isVoter, "Airline is already a voter");
 
         address(this).transfer(msg.value);
         airlines[msg.sender].isVoter = true;
