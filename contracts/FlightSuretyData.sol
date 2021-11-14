@@ -64,6 +64,10 @@ contract FlightSuretyData {
         
         callers[address(this)].isAuthorized = true;
         callers[contractOwner].isAuthorized = true;
+
+        if (msg.value >= FEE_AIRLINE_REGISTRATION) {
+            address(this).tranfer(msg.value);
+        }
     }
 
     /********************************************************************************************/

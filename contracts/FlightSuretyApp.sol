@@ -107,40 +107,30 @@ contract FlightSuretyApp {
     */   
     function registerAirline(address _airline) external requireIsOperational {
         require(flightSuretyData.isRegisteredAirline(_airline) == false, "Airline is already registered");
-        
-        flightSuretyData.registerAirline(_airline);
 
+        uint256 airlineCount = flightSuretyData.getAirlineCount();
 
-        // if (airlinesCount <= airlinesThreshold) {
-        //     airlinesCount = airlinesCount.add(1);
-        //     airlines[_account] = Airline({
-        //         airlineId: airlinesCount,
-        //         isRegistered: true,
-        //         isVoter: false
-        //     });
-        // } else {
-        //     bool isDuplicate = false;
-        //     for (uint256 i=0; i<airlinesCount; i++) {
-        //         if (votes[i] == msg.sender) {
-        //             isDuplicate = true;
-        //             break;
-        //         }
-        //     }
-        //     require(!isDuplicate, "Caller has already called this function.");
+        if (airlineCount <= airlinesThreshold) {
+            flightSuretyData.registerAirline(_airline);
+        } else {
+            bool isDuplicate = false;
+            for (uint256 i=0; i<airlineCount; i++) {
+                if (votes[i] == msg.sender) {
+                    isDuplicate = true;
+                    break;
+                }
+            }
+            require(!isDuplicate, "Caller has already called this function.");
 
-        //     votes.push(msg.sender);
-        //     if (votes.length >= airlinesCount.div(2)) {
-        //         airlinesCount = airlinesCount.add(1);
-        //         airlines[_account] = Airline({
-        //             airlineId: airlinesCount,
-        //             isRegistered: true,
-        //             isVoter: false
-        //         });
-        //         votes = new address[](0);
-        //     }
-        // }
+            votes.push(msg.sender);
+            if (votes.length >= airlineCount.div(2)) {
+                flightSuretyData.registerAirline(_airline);
+                votes = new address[](0);
+            }
+        }
         emit AirlineRegistered(_airline);
     }
+    
 
 
    /**
