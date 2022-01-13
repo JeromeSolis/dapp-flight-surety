@@ -7,7 +7,7 @@ contract('Flight Surety Tests', async (accounts) => {
   var config;
   before('setup contract', async () => {
     config = await Test.Config(accounts);
-    await config.flightSuretyData.authorizeCaller(config.flightSuretyApp.address, {from: config.owner});
+    await config.flightSuretyData.setAuthorizedCaller(config.flightSuretyApp.address, {from: config.owner});
   });
 
   /****************************************************************************************/
@@ -20,6 +20,16 @@ contract('Flight Surety Tests', async (accounts) => {
     let status = await config.flightSuretyData.isOperational.call({from: config.owner});
     assert.equal(status, true, "Incorrect initial operating status value");
 
+  });
+
+  it(`First airline was properly registered`, async function() {
+    let (airlineId , registeredStatus, fundedStatus) = await config.flightSuretyData.getAirline(config.firstAirline, {from: config.owner});
+    assert.equal(registeredStatus, true, "First airline wasn't registered")
+  });
+
+  it(`First airline was properly funded`, async function() {
+    let (airlineId , registeredStatus, fundedStatus) = await config.flightSuretyData.getAirline(config.firstAirline, {from: config.owner});
+    assert.equal(fundedStatus, true, "First airline wasn't funded")
   });
 
   it(`(multiparty) can block access to setOperatingStatus() for non-Contract Owner account`, async function () {
@@ -43,7 +53,7 @@ contract('Flight Surety Tests', async (accounts) => {
     let accessDenied = false;
 
     try {
-        await config.flightSuretyData.setOperatingStatus(false);
+        await config.flightSuretyData.setOperatingStatus(false, {from: config.owner});
     } catch(e) {
         accessDenied = true;
     }

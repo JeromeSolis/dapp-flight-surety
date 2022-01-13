@@ -28,6 +28,13 @@ contract FlightSuretyApp {
     uint8 private constant STATUS_CODE_LATE_OTHER = 50;
 
     address private contractOwner;          // Account used to deploy contract
+    address[] votes = new address[](0);
+
+    struct Airline {
+        uint256 airlineId;
+        bool isRegistered;
+        bool isFunded;
+    }
 
     struct Flight {
         bool isRegistered;
@@ -37,7 +44,14 @@ contract FlightSuretyApp {
     }
     mapping(bytes32 => Flight) private flights;
 
- 
+    /********************************************************************************************/
+    /*                                       EVENT DEFINITIONS                                  */
+    /********************************************************************************************/
+
+    event AirlineRegistered(address airlineAddress);
+    event AirlineFunded(address airlineAddress);
+    event AuthorizedCallerAdded(address caller);
+
     /********************************************************************************************/
     /*                                       FUNCTION MODIFIERS                                 */
     /********************************************************************************************/
@@ -52,7 +66,7 @@ contract FlightSuretyApp {
     */
     modifier requireIsOperational() {
          // Modify to call data contract's status
-        require(true, "Contract is currently not operational");  
+        require(isOperational(), "Contract is currently not operational");  
         _;  // All modifiers require an "_" which indicates where the function body will be added
     }
 
@@ -64,6 +78,11 @@ contract FlightSuretyApp {
         _;
     }
 
+    modifier requireAuthorizedCaller() {
+        require(isAuthorizedCaller(msg.sender), "Caller is not authorized");
+        _;
+    }
+
     /********************************************************************************************/
     /*                                       CONSTRUCTOR                                        */
     /********************************************************************************************/
@@ -72,10 +91,9 @@ contract FlightSuretyApp {
     * @dev Contract constructor
     *
     */
-    constructor(address dataContract, address firstAirline) public {
+    constructor(address dataContract) public {
         contractOwner = msg.sender;
         flightSuretyData = FlightSuretyData(dataContract);
-        registerAirline(firstAirline);
     }
 
     /********************************************************************************************/
@@ -84,6 +102,20 @@ contract FlightSuretyApp {
 
     function isOperational() public pure returns (bool) {
         return true;  // Modify to call data contract's status
+    }
+
+    function isAuthorizedCaller(address caller) public view returns (bool) {
+        return flightSuretyData.isAuthorizedCaller(caller);
+    }
+
+    function setAuthorizedCaller(address caller) private {
+        flightSuretyData.setAuthorizedCaller(caller);
+
+        emit AuthorizedCallerAdded(caller);
+    }
+
+    function getAirline(address airlineAddress) public view returns (uint256 airlineId, bool isRegistered, bool isFunded) {
+        return flightSuretyData.getAirline(airlineAddress);
     }
 
     /********************************************************************************************/
@@ -95,8 +127,42 @@ contract FlightSuretyApp {
     * @dev Add an airline to the registration queue
     *
     */   
-    function registerAirline(address airlineAddress) requireIsOperational public {
-        flightSuretyData.registerAirline(airlineAddress);
+    function registerAirline(address airlineAddress) requireIsOperational requireAuthorizedCaller public {
+        uint256 airlineCount = flightSuretyData.getAirlineCount();
+        uint256 threshold = flightSuretyData.getMultipartyThreshold();
+        
+        if (airlineCount <= threshold) {
+            flightSuretyData.addAirline(airlineAddress);
+        } else {
+            bool isDuplicate = false;
+            for (uint256 i=0; i<airlineCount; i++) {
+                if (votes[i] == msg.sender) {
+                    isDuplicate = true;
+                    break;
+                }
+            }
+            require(!isDuplicate, "Caller has already called this function.");
+
+            votes.push(msg.sender);
+            if (votes.length >= airlineCount.div(2)) {
+                flightSuretyData.addAirline(airlineAddress);
+                votes = new address[](0);
+            }
+        }
+        emit AirlineRegistered(airlineAddress);
+    }
+
+    function fundAirline() requireIsOperational external payable {
+
+        ( , bool registrationStatus, ) = flightSuretyData.getAirline(msg.sender);
+
+        require(registrationStatus, "Caller isn't registered yet");
+        require(msg.value >= flightSuretyData.getAirlineRegistrationFee(), "Payment doesn't meet minimum value");
+
+        flightSuretyData.fund.value(msg.value)(msg.sender);
+        flightSuretyData.setAirlineFunded(msg.sender);
+
+        emit AirlineFunded(msg.sender);
     }
 
 
@@ -259,5 +325,13 @@ contract FlightSuretyApp {
 }
 
 contract FlightSuretyData {
-    function registerAirline(address airlineAddress) public;
+    function isAuthorizedCaller(address caller) public view returns (bool);
+    function setAuthorizedCaller(address caller) external;
+    function getMultipartyThreshold() public view returns (uint256);
+    function getAirlineRegistrationFee() public view returns (uint256);
+    function getAirlineCount() public view returns (uint256);
+    function getAirline(address airlineAddress) public view returns (uint256 airlineId, bool isRegistered, bool isFunded);
+    function setAirlineFunded(address airline) external;
+    function addAirline(address airlineAddress) external;
+    function fund(address airline) public payable;
 }
