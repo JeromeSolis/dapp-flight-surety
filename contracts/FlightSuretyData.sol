@@ -10,7 +10,7 @@ contract FlightSuretyData {
     /********************************************************************************************/
 
     address private contractOwner;                                      // Account used to deploy contract
-    bool private operational = true;                                    // Blocks all state changes throughout the contract if false
+    bool private operational;                                    // Blocks all state changes throughout the contract if false
     mapping (address => bool) private authorizedCaller;
 
     struct Airline {
@@ -44,6 +44,7 @@ contract FlightSuretyData {
     *      The deploying account becomes contractOwner
     */
     constructor(address firstAirline) public payable {
+        operational = true;
         contractOwner = msg.sender;
         // address firstAirline = msg.sender;
         
@@ -99,7 +100,7 @@ contract FlightSuretyData {
     }
 
     function isAuthorizedCaller(address caller) public view returns (bool) {
-        return (authorizedCaller[caller]);
+        return authorizedCaller[caller];
     }
 
 
@@ -112,7 +113,7 @@ contract FlightSuretyData {
         operational = mode;
     }
 
-    function setAuthorizedCaller(address caller) external requireIsAuthorizedCaller {
+    function setAuthorizedCaller(address caller) public {
         authorizedCaller[caller] = true;
     }
 
@@ -159,14 +160,14 @@ contract FlightSuretyData {
     *
     */
 
-    function addAirline(address airline) public requireIsOperational requireIsAuthorizedCaller {
+    function addAirline(address airline) public requireIsOperational {
         require(airlines[airline].airlineId == 0, "Airline already created");
 
         airlineCount.add(1);
         airlines[airline] = Airline({airlineId: airlineCount, isRegistered:true, isFunded: false});
     }
 
-    function setAirlineFunded(address airline) public requireIsOperational requireIsAuthorizedCaller {
+    function setAirlineFunded(address airline) public requireIsOperational {
         require(airlines[airline].isRegistered == true, "Airline isn't registered yet");
         require(airlines[airline].isFunded == false, "Airline is already funded");
 
@@ -226,7 +227,7 @@ contract FlightSuretyData {
     * @dev Fallback function for funding smart contract.
     *
     */
-    function() external payable {
-        fund(address(this));
-    }
+    // function() external payable {
+    //     fund(address(this));
+    // }
 }

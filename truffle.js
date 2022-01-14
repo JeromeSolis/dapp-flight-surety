@@ -1,5 +1,5 @@
-var HDWalletProvider = require("truffle-hdwallet-provider");
-var mnemonic = "tennis notice reflect salon royal rhythm rich supply culture isolate century dog";
+// var HDWalletProvider = require("truffle-hdwallet-provider");
+// var mnemonic = "tennis notice reflect salon royal rhythm rich supply culture isolate century dog";
 
 module.exports = {
   networks: {
@@ -10,7 +10,7 @@ module.exports = {
       host: "127.0.0.1",
       port: 7545,
       network_id: '*',
-      gas: 4500000
+      // gas: 6721975
     }
   },
   compilers: {

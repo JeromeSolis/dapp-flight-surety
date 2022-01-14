@@ -3,7 +3,9 @@ const FlightSuretyData = artifacts.require("FlightSuretyData");
 const fs = require('fs');
 const Web3 = require('web3');
 
-let w3 = new Web3(new Web3.providers.HttpProvider('http://127.0.0.1:7545'));
+// const Web3 = require('web3');
+
+// let w3 = new Web3(new Web3.providers.HttpProvider('http://127.0.0.1:7545'));
 
 /**
  * Inspiration from yuryprokashev's repo (https://github.com/yuryprokashev/flight-surety)
@@ -12,7 +14,8 @@ let w3 = new Web3(new Web3.providers.HttpProvider('http://127.0.0.1:7545'));
  */
 module.exports = async function(deployer, network, accounts) {
     let firstAirline = accounts[0];
-    await deployer.deploy(FlightSuretyData, firstAirline, {from:firstAirline, value:w3.utils.toWei("0.001", "ether")});
+    let fund = Web3.utils.toWei("10","ether");
+    await deployer.deploy(FlightSuretyData, firstAirline, {from:firstAirline, value:fund});
     await deployer.deploy(FlightSuretyApp, FlightSuretyData.address);
     
     let dataContract = await FlightSuretyData.deployed();
