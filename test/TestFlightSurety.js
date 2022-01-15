@@ -179,7 +179,7 @@ contract('Flight Surety Tests', accounts => {
             await flightSuretyApp.registerAirline(newAirline, {from:firstAirline});
             await flightSuretyApp.registerAirline(newestAirline, {from:newAirline});
         } catch(err) {
-          console.log(err);
+          // console.log(err);
         }
         const result = await flightSuretyApp.getAirline(newestAirline); 
         // ASSERT

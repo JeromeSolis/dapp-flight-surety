@@ -133,7 +133,7 @@ contract FlightSuretyApp {
     * @dev Add an airline to the registration queue
     *
     */   
-    function registerAirline(address airlineAddress) requireIsOperational public {
+    function registerAirline(address airlineAddress) requireIsOperational requireAuthorizedCaller public {
         uint256 airlineCount = flightSuretyData.getAirlineCount();
         uint256 threshold = flightSuretyData.getMultipartyThreshold();
 
@@ -161,11 +161,11 @@ contract FlightSuretyApp {
 
     function fundAirline() requireIsOperational external payable {
 
-        // ( , bool registrationStatus, ) = getAirline(msg.sender);
-        // uint256 registrationFee = flightSuretyData.getAirlineRegistrationFee();
+        ( , bool registrationStatus, ) = getAirline(msg.sender);
+        uint256 registrationFee = flightSuretyData.getAirlineRegistrationFee();
 
-        // require(registrationStatus, "Caller isn't registered yet");
-        // require(msg.value >= registrationFee, "Payment doesn't meet minimum value");
+        require(registrationStatus, "Caller isn't registered yet");
+        require(msg.value >= registrationFee, "Payment doesn't meet minimum value");
 
         flightSuretyData.setAirlineFunded(msg.sender);
         setAuthorizedCaller(msg.sender);
