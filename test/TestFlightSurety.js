@@ -26,23 +26,25 @@ contract('Flight Surety Tests', accounts => {
 
   let flightSuretyData, flightSuretyApp;
   // var config;
-  before('setup contract', async function () {
-    flightSuretyData = await FlightSuretyData.new(firstAirline, {from:contractOwner, value:fund});
-    flightSuretyApp = await FlightSuretyApp.new(flightSuretyData.address, {from:contractOwner})
-    try {
-      await flightSuretyData.setAuthorizedCaller(flightSuretyApp.address, {from:contractOwner});
-    } catch (err) {
-      console.log(err);
-    }
-    // await config.flightSuretyData.setAuthorizedCaller(config.flightSuretyApp.address, {from: config.owner});
-    // config = await Test.Config(accounts);
-  });
 
   /****************************************************************************************/
   /* Operations and Settings                                                              */
   /****************************************************************************************/
 
   describe('Test operational status control implementation', async function () {
+
+    before('setup contract', async function () {
+
+      flightSuretyData = await FlightSuretyData.new(firstAirline, {from:contractOwner, value:fund});
+      flightSuretyApp = await FlightSuretyApp.new(flightSuretyData.address, {from:contractOwner})
+      try {
+        await flightSuretyData.setAuthorizedCaller(flightSuretyApp.address, {from:contractOwner});
+      } catch (err) {
+        console.log(err);
+      }
+      // await config.flightSuretyData.setAuthorizedCaller(config.flightSuretyApp.address, {from: config.owner});
+      // config = await Test.Config(accounts);
+    });
 
     afterEach(async () => {
       // Set back operational status to true after each test
@@ -102,6 +104,18 @@ contract('Flight Surety Tests', accounts => {
 
   describe('Test airline functionality', async function () {
 
+    before(async () => {
+      // Resetting contract state
+      flightSuretyData = await FlightSuretyData.new(firstAirline, {from:contractOwner, value:fund});
+      flightSuretyApp = await FlightSuretyApp.new(flightSuretyData.address, {from:contractOwner})
+      try {
+        await flightSuretyData.setAuthorizedCaller(flightSuretyApp.address, {from:contractOwner});
+        console.log('New contracts instantiated');
+      } catch (err) {
+        console.log(err);
+      }
+    })
+
     it(`(Airline Contract Initialization) First airline was properly registered`, async function() {
       // Get first airline
       let airline = await flightSuretyApp.getAirline(firstAirline, {from:contractOwner});
@@ -115,13 +129,7 @@ contract('Flight Surety Tests', accounts => {
 
     describe('(Multiparty Concensus)', async function () {
 
-      before(async () => {
-        // Resetting contract state
-        flightSuretyData = await FlightSuretyData.new(firstAirline, {from:contractOwner, value:fund});
-        flightSuretyApp = await FlightSuretyApp.new(flightSuretyData.address, {from:contractOwner})
-        await flightSuretyData.setAuthorizedCaller(flightSuretyApp.address, {from:contractOwner});
-        console.log('New contracts reinstantiated');
-      })
+      
 
       it('Only existing airline may register a new airline until there are at least four airlines registered', async () => {
         // ARRANGE
@@ -132,14 +140,14 @@ contract('Flight Surety Tests', accounts => {
         // ACT
         try {
             await flightSuretyApp.registerAirline(secondAirline, {from:firstAirline});
-            // await flightSuretyApp.fundAirline({from:secondAirline, value:fund});
+            await flightSuretyApp.fundAirline({from:secondAirline, value:fund});
             await flightSuretyApp.registerAirline(thirdAirline, {from:secondAirline});
-            // await flightSuretyApp.fundAirline({from:thirdAirline, value:fund});
+            await flightSuretyApp.fundAirline({from:thirdAirline, value:fund});
             await flightSuretyApp.registerAirline(fourthAirline, {from:thirdAirline});
-            // await flightSuretyApp.fundAirline({from:fourthAirline, value:fund});
+            await flightSuretyApp.fundAirline({from:fourthAirline, value:fund});
             await flightSuretyApp.registerAirline(fifthAirline, {from:fourthAirline});
         } catch(err) {
-          console.log(err);
+          // console.log(err);
         }
         const result2 = await flightSuretyApp.getAirline(secondAirline);
         const result3 = await flightSuretyApp.getAirline(thirdAirline); 
@@ -192,7 +200,7 @@ contract('Flight Surety Tests', accounts => {
         }
         const result = await flightSuretyApp.getAirline(newestAirline); 
         // ASSERT
-        assert.equal(result[1], true, "Airline should not be able to register another airline if it hasn't provided funding");
+        assert.equal(result[1], true, "Airline should be able to register another airline if it has provided funding");
       });
     });
   });

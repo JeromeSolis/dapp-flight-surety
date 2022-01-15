@@ -49,7 +49,7 @@ contract FlightSuretyApp {
     /*                                       EVENT DEFINITIONS                                  */
     /********************************************************************************************/
 
-    event AirlineRegistered(address airlineAddress);
+    event AirlineRegistered(uint256 airlineCount, address airlineAddress);
     event AirlineFunded(address airlineAddress);
     event AuthorizedCallerAdded(address caller);
 
@@ -136,10 +136,10 @@ contract FlightSuretyApp {
     function registerAirline(address airlineAddress) requireIsOperational public {
         uint256 airlineCount = flightSuretyData.getAirlineCount();
         uint256 threshold = flightSuretyData.getMultipartyThreshold();
-        
-        if (airlineCount <= threshold) {
+
+        if (airlineCount < threshold) {
             flightSuretyData.addAirline(airlineAddress);
-            emit AirlineRegistered(airlineAddress);
+            emit AirlineRegistered(airlineCount.add(1), airlineAddress);
         } else {
             bool isDuplicate = false;
             for (uint256 i=0; i<airlineCount; i++) {
@@ -153,7 +153,7 @@ contract FlightSuretyApp {
             votes.push(msg.sender);
             if (votes.length >= airlineCount.div(2)) {
                 flightSuretyData.addAirline(airlineAddress);
-                emit AirlineRegistered(airlineAddress);
+                emit AirlineRegistered(airlineCount.add(1), airlineAddress);
                 votes = new address[](0);
             }
         }

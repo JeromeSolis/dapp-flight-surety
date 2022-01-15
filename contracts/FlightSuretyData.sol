@@ -51,7 +51,7 @@ contract FlightSuretyData {
         authorizedCaller[contractOwner] = true;
         authorizedCaller[address(this)] = true;
 
-        airlineCount.add(1);
+        airlineCount = airlineCount.add(1);
         airlines[firstAirline] = Airline({airlineId: airlineCount, isRegistered:true, isFunded: true});
         address(this).transfer(msg.value);
         authorizedCaller[firstAirline] = true;
@@ -163,7 +163,7 @@ contract FlightSuretyData {
     function addAirline(address airline) public requireIsOperational {
         require(airlines[airline].airlineId == 0, "Airline already created");
 
-        airlineCount.add(1);
+        airlineCount = airlineCount.add(1);
         airlines[airline] = Airline({airlineId: airlineCount, isRegistered:true, isFunded: false});
     }
 
@@ -227,7 +227,7 @@ contract FlightSuretyData {
     * @dev Fallback function for funding smart contract.
     *
     */
-    // function() external payable {
-    //     fund(address(this));
-    // }
+    function() external payable {
+
+    }
 }
