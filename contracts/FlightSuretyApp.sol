@@ -51,6 +51,7 @@ contract FlightSuretyApp {
 
     event AirlineRegistered(uint256 airlineCount, address airlineAddress);
     event AirlineFunded(address airlineAddress);
+    event AirlineVoteRegistered(address airlineCandidate, address airlineVoter);
     event AuthorizedCallerAdded(address caller);
 
     /********************************************************************************************/
@@ -142,7 +143,7 @@ contract FlightSuretyApp {
             emit AirlineRegistered(airlineCount.add(1), airlineAddress);
         } else {
             bool isDuplicate = false;
-            for (uint256 i=0; i<airlineCount; i++) {
+            for (uint256 i=0; i<votes.length; i++) {
                 if (votes[i] == msg.sender) {
                     isDuplicate = true;
                     break;
@@ -151,6 +152,8 @@ contract FlightSuretyApp {
             require(!isDuplicate, "Caller has already called this function.");
 
             votes.push(msg.sender);
+            emit AirlineVoteRegistered(airlineAddress, msg.sender);
+
             if (votes.length >= airlineCount.div(2)) {
                 flightSuretyData.addAirline(airlineAddress);
                 emit AirlineRegistered(airlineCount.add(1), airlineAddress);
@@ -167,11 +170,11 @@ contract FlightSuretyApp {
         require(registrationStatus, "Caller isn't registered yet");
         require(msg.value >= registrationFee, "Payment doesn't meet minimum value");
 
-        flightSuretyData.setAirlineFunded(msg.sender);
-        setAuthorizedCaller(msg.sender);
         address(flightSuretyData).transfer(msg.value);
-
+        flightSuretyData.setAirlineFunded(msg.sender);
         emit AirlineFunded(msg.sender);
+
+        setAuthorizedCaller(msg.sender);
     }
 
 

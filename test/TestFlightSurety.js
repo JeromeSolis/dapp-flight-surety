@@ -104,7 +104,7 @@ contract('Flight Surety Tests', accounts => {
 
   describe('Test airline functionality', async function () {
 
-    before(async () => {
+    beforeEach(async () => {
       // Resetting contract state
       flightSuretyData = await FlightSuretyData.new(firstAirline, {from:contractOwner, value:fund});
       flightSuretyApp = await FlightSuretyApp.new(flightSuretyData.address, {from:contractOwner})
@@ -129,8 +129,6 @@ contract('Flight Surety Tests', accounts => {
 
     describe('(Multiparty Concensus)', async function () {
 
-      
-
       it('Only existing airline may register a new airline until there are at least four airlines registered', async () => {
         // ARRANGE
         let secondAirline = accounts[2];
@@ -139,26 +137,72 @@ contract('Flight Surety Tests', accounts => {
         let fifthAirline = accounts[5];
         // ACT
         try {
-            await flightSuretyApp.registerAirline(secondAirline, {from:firstAirline});
-            await flightSuretyApp.fundAirline({from:secondAirline, value:fund});
-            await flightSuretyApp.registerAirline(thirdAirline, {from:secondAirline});
-            await flightSuretyApp.fundAirline({from:thirdAirline, value:fund});
-            await flightSuretyApp.registerAirline(fourthAirline, {from:thirdAirline});
-            await flightSuretyApp.fundAirline({from:fourthAirline, value:fund});
-            await flightSuretyApp.registerAirline(fifthAirline, {from:fourthAirline});
+          await flightSuretyApp.registerAirline(secondAirline, {from:firstAirline});
+          await flightSuretyApp.fundAirline({from:secondAirline, value:fund});
+          await flightSuretyApp.registerAirline(thirdAirline, {from:secondAirline});
+          await flightSuretyApp.fundAirline({from:thirdAirline, value:fund});
+          await flightSuretyApp.registerAirline(fourthAirline, {from:thirdAirline});
+          await flightSuretyApp.fundAirline({from:fourthAirline, value:fund});
+          await flightSuretyApp.registerAirline(fifthAirline, {from:fourthAirline});
         } catch(err) {
           // console.log(err);
         }
-        const result2 = await flightSuretyApp.getAirline(secondAirline);
-        const result3 = await flightSuretyApp.getAirline(thirdAirline); 
-        const result4 = await flightSuretyApp.getAirline(fourthAirline); 
-        const result5 = await flightSuretyApp.getAirline(fifthAirline);  
+        let result2 = await flightSuretyApp.getAirline(secondAirline);
+        let result3 = await flightSuretyApp.getAirline(thirdAirline); 
+        let result4 = await flightSuretyApp.getAirline(fourthAirline); 
+        let result5 = await flightSuretyApp.getAirline(fifthAirline);  
         // ASSERT
         assert.equal(result2[1], true, "Airline 2 should be able to register another airline if it has provided funding");
         assert.equal(result3[1], true, "Airline 3 should be able to register another airline if it has provided funding");
         assert.equal(result4[1], true, "Airline 4 should be able to register another airline if it has provided funding");
         assert.equal(result5[1], false, "Airline 5 should not be able to register another airline if it hasn't provided funding");
       });
+
+      it('50% of airline are required to register a new airline', async () => {
+        let secondAirline = accounts[2];
+        let thirdAirline = accounts[3];
+        let fourthAirline = accounts[4];
+        let fifthAirline = accounts[5];
+
+        try {
+          await flightSuretyApp.registerAirline(secondAirline, {from:firstAirline});
+          await flightSuretyApp.fundAirline({from:secondAirline, value:fund});
+          await flightSuretyApp.registerAirline(thirdAirline, {from:secondAirline});
+          await flightSuretyApp.fundAirline({from:thirdAirline, value:fund});
+          await flightSuretyApp.registerAirline(fourthAirline, {from:thirdAirline});
+          await flightSuretyApp.fundAirline({from:fourthAirline, value:fund});
+
+          await flightSuretyApp.registerAirline(fifthAirline, {from:thirdAirline});
+          await flightSuretyApp.registerAirline(fifthAirline, {from:fourthAirline});
+        } catch (err) {
+          console.log(err);
+        }
+        let result5 = await flightSuretyApp.getAirline(fifthAirline); 
+        assert.equal(result5[1], true, "Airline 3 and 4 should be able to register another airline if it has provided funding"); 
+      })
+
+      it("Same airline can't vote twice", async () => {
+        let secondAirline = accounts[2];
+        let thirdAirline = accounts[3];
+        let fourthAirline = accounts[4];
+        let fifthAirline = accounts[5];
+
+        try {
+          await flightSuretyApp.registerAirline(secondAirline, {from:firstAirline});
+          await flightSuretyApp.fundAirline({from:secondAirline, value:fund});
+          await flightSuretyApp.registerAirline(thirdAirline, {from:secondAirline});
+          await flightSuretyApp.fundAirline({from:thirdAirline, value:fund});
+          await flightSuretyApp.registerAirline(fourthAirline, {from:thirdAirline});
+          await flightSuretyApp.fundAirline({from:fourthAirline, value:fund});
+
+          await flightSuretyApp.registerAirline(fifthAirline, {from:thirdAirline});
+          await flightSuretyApp.registerAirline(fifthAirline, {from:thirdAirline});
+        } catch (err) {
+          // console.log(err);
+        }
+        let result5 = await flightSuretyApp.getAirline(fifthAirline); 
+        assert.equal(result5[1], false, "Airline 3 can't vote twice to register an airline"); 
+      })
     });   
 
     describe('(Airline Ante) Airline cannot register an new airline using registerAirline() if it is not funded', async function () {
