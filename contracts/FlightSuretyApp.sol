@@ -208,12 +208,17 @@ contract FlightSuretyApp {
     *
     */  
     function processFlightStatus(address airline, string memory flight, uint256 timestamp, uint8 statusCode) internal requireIsOperational requireIsAuthorizedCaller {
+        bytes32 flightKey = getFlightKey(airline, flight, timestamp);
+
         flightSuretyData.updateFlight(airline, flight, timestamp, statusCode);
+        if (statusCode == STATUS_CODE_LATE_AIRLINE) {
+            flightSuretyData.creditInsurees(flightKey);
+        }
     }
 
 
     // Generate a request for oracles to fetch flight information
-    function fetchFlightStatus(address airline, string flight, uint256 timestamp) external {
+    function fetchFlightStatus(address airline, string flight, uint256 timestamp) external requireIsOperational {
         uint8 index = getRandomIndex(msg.sender);
 
         // Generate a unique key for storing the request
@@ -222,6 +227,7 @@ contract FlightSuretyApp {
 
         emit OracleRequest(index, airline, flight, timestamp);
     }
+
 
     function buyInsurance(address airline, string flight, uint256 timestamp) external payable requireIsOperational {
         bytes32 flightKey = getFlightKey(airline, flight, timestamp);
@@ -233,6 +239,11 @@ contract FlightSuretyApp {
         address(flightSuretyData).transfer(msg.value);
         flightSuretyData.addInsurance(msg.sender, flightKey, msg.value);
         emit InsurancePurchased(msg.sender, airline, flight, timestamp);
+    }
+
+
+    function withdrawCreditedAmount(uint256 amount) external payable requireIsOperational {
+        flightSuretyData.payInsuree(msg.sender, amount);
     }
 
 
@@ -380,4 +391,6 @@ contract FlightSuretyData {
     function addFlight(address airline, string flightName, uint256 timestamp) external;
     function updateFlight(address airline, string flightName, uint256 timestamp, uint8 statusCode) external;
     function addInsurance(address insuree, bytes32 flightKey, uint256 amount) external;
+    function creditInsurees(bytes32 flightKey) external;
+    function payInsuree(address insuree, uint256 amount) external payable;
 }

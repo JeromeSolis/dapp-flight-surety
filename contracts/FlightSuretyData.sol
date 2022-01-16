@@ -53,7 +53,7 @@ contract FlightSuretyData {
     event AirlineFunded(address airlineAddress);
     event AuthorizedCallerAdded(address caller);
     event FundsAdded(address receiver, uint256 amount, address payer);
-    event AmountWithdrawn(address receiver, uint256 amount);
+    event PaidAmount(address receiver, uint256 amount);
 
     /**
     * @dev Constructor
@@ -134,6 +134,16 @@ contract FlightSuretyData {
 
     function isRegisteredFlight(bytes32 flightKey) public view returns (bool) {
         return flights[flightKey].isRegistered;
+    }
+
+    function isInsured(address insuree, bytes32 flightKey) public view returns (bool) {
+        bool insuranceStatus = false;
+        for (uint256 i=0; i< insurancesPerInsuree[insuree].length; i++) {
+            if (insurancesPerInsuree[insuree][i].flightKey == flightKey && insurancesPerInsuree[insuree][i].amount > 0) {
+                insuranceStatus = true;
+            }
+        }
+        return insuranceStatus;
     }
 
 
@@ -239,6 +249,8 @@ contract FlightSuretyData {
      *  @dev Credits payouts to insurees
     */
     function creditInsurees(bytes32 flightKey) external requireIsOperational requireIsAuthorizedCaller {
+        // require(isInsured(insuree, flightKey), "Caller didn't purchased an insurance for this flight");
+
         for (uint256 i=0; i<insurancesPerFlight[flightKey].length; i++) {
             address creditedInsuree = insurancesPerFlight[flightKey][i].insuree;
             uint256 creditedAmount = insurancesPerFlight[flightKey][i].amount.mul(NUM_INSURANCE_MULTIPLIER).div(DENUM_INSURANCE_MULTIPLIER);
@@ -257,7 +269,7 @@ contract FlightSuretyData {
 
         creditedAmounts[insuree] = creditedAmounts[insuree].sub(amount);
         insuree.transfer(amount);
-        emit AmountWithdrawn(insuree, amount);
+        emit PaidAmount(insuree, amount);
     }
 
    /**
