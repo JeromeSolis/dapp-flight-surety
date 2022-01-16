@@ -11,7 +11,7 @@ contract('Oracles', async (accounts) => {
   const TEST_ORACLES_COUNT = 20;
   // var config;
   const contractOwner = accounts[0];
-  const firstAirline = accounts[24];
+  const firstAirline = accounts[1];
   const fund = Web3.utils.toWei("10","ether");
 
   let flightSuretyData, flightSuretyApp;
