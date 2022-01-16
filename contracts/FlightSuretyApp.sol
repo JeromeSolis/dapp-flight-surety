@@ -53,6 +53,7 @@ contract FlightSuretyApp {
     event AirlineFunded(address airlineAddress);
     event AirlineVoteRegistered(address airlineCandidate, address airlineVoter);
     event AuthorizedCallerAdded(address caller);
+    event InsurancePurchased(address insuree, address airline, string flight, uint256 timestamp);
 
     /********************************************************************************************/
     /*                                       FUNCTION MODIFIERS                                 */
@@ -80,8 +81,13 @@ contract FlightSuretyApp {
         _;
     }
 
-    modifier requireAuthorizedCaller() {
+    modifier requireIsAuthorizedCaller() {
         require(isAuthorizedCaller(msg.sender), "Caller is not authorized");
+        _;
+    }
+
+    modifier requireIsRegisteredAirline() {
+        require(isRegisteredAirline(msg.sender), "Caller is not a registered airline");
         _;
     }
 
@@ -111,6 +117,18 @@ contract FlightSuretyApp {
         return flightSuretyData.isAuthorizedCaller(caller);
     }
 
+    function isRegisteredAirline(address airline) public view returns (bool) {
+        return flightSuretyData.isRegisteredAirline(airline);
+    }
+
+    function isFundedAirline(address airline) public view returns (bool) {
+        return flightSuretyData.isFundedAirline(airline);
+    }
+
+    function isRegisteredFlight(bytes32 flightKey) public view returns (bool) {
+        return flightSuretyData.isRegisteredFlight(flightKey);
+    }
+
     function setOperatingStatus(bool mode) external requireContractOwner {
         operational = mode;
     }
@@ -134,7 +152,7 @@ contract FlightSuretyApp {
     * @dev Add an airline to the registration queue
     *
     */   
-    function registerAirline(address airlineAddress) requireIsOperational requireAuthorizedCaller public {
+    function registerAirline(address airlineAddress) requireIsOperational requireIsAuthorizedCaller public {
         uint256 airlineCount = flightSuretyData.getAirlineCount();
         uint256 threshold = flightSuretyData.getMultipartyThreshold();
 
@@ -162,12 +180,9 @@ contract FlightSuretyApp {
         }
     }
 
-    function fundAirline() requireIsOperational external payable {
+    function fundAirline() requireIsOperational requireIsRegisteredAirline external payable {
 
-        ( , bool registrationStatus, ) = getAirline(msg.sender);
         uint256 registrationFee = flightSuretyData.getAirlineRegistrationFee();
-
-        require(registrationStatus, "Caller isn't registered yet");
         require(msg.value >= registrationFee, "Payment doesn't meet minimum value");
 
         address(flightSuretyData).transfer(msg.value);
@@ -182,16 +197,18 @@ contract FlightSuretyApp {
     * @dev Register a future flight for insuring.
     *
     */  
-    function registerFlight() external pure {
+    function registerFlight(string flightName, uint256 timestamp) external requireIsOperational requireIsAuthorizedCaller {
+        require(timestamp > block.timestamp, "Flight has already departed");
 
+        flightSuretyData.addFlight(msg.sender, flightName, timestamp);
     }
     
    /**
     * @dev Called after oracle has updated flight status
     *
     */  
-    function processFlightStatus(address airline, string memory flight, uint256 timestamp, uint8 statusCode) internal pure {
-
+    function processFlightStatus(address airline, string memory flight, uint256 timestamp, uint8 statusCode) internal requireIsOperational requireIsAuthorizedCaller {
+        flightSuretyData.updateFlight(airline, flight, timestamp, statusCode);
     }
 
 
@@ -204,7 +221,19 @@ contract FlightSuretyApp {
         oracleResponses[key] = ResponseInfo({requester: msg.sender, isOpen: true});
 
         emit OracleRequest(index, airline, flight, timestamp);
-    } 
+    }
+
+    function buyInsurance(address airline, string flight, uint256 timestamp) external payable requireIsOperational {
+        bytes32 flightKey = getFlightKey(airline, flight, timestamp);
+
+        require(msg.value <= 1 ether, "Payment is too high");
+        require(isFundedAirline(airline), "Airline is not funded");
+        require(isRegisteredFlight(flightKey), "Flight is not registered");
+    
+        address(flightSuretyData).transfer(msg.value);
+        flightSuretyData.addInsurance(msg.sender, flightKey, msg.value);
+        emit InsurancePurchased(msg.sender, airline, flight, timestamp);
+    }
 
 
 // region ORACLE MANAGEMENT
@@ -338,6 +367,9 @@ contract FlightSuretyApp {
 
 contract FlightSuretyData {
     function isAuthorizedCaller(address caller) public view returns (bool);
+    function isRegisteredAirline(address airline) public view returns (bool);
+    function isFundedAirline(address airline) public view returns (bool);
+    function isRegisteredFlight(bytes32 flightKey) public view returns (bool);
     function setAuthorizedCaller(address caller) external;
     function getMultipartyThreshold() public view returns (uint256);
     function getAirlineRegistrationFee() public view returns (uint256);
@@ -345,5 +377,7 @@ contract FlightSuretyData {
     function getAirline(address airlineAddress) public view returns (uint256 airlineId, bool isRegistered, bool isFunded);
     function setAirlineFunded(address airline) external;
     function addAirline(address airlineAddress) external;
-    // function fund(address airline) public payable;
+    function addFlight(address airline, string flightName, uint256 timestamp) external;
+    function updateFlight(address airline, string flightName, uint256 timestamp, uint8 statusCode) external;
+    function addInsurance(address insuree, bytes32 flightKey, uint256 amount) external;
 }
