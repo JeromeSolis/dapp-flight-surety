@@ -216,6 +216,13 @@ contract FlightSuretyApp {
         }
     }
 
+    function getFlightStatus(address airline, string flight, uint256 timestamp) external requireIsOperational returns (uint8) {
+        bytes32 flightKey = getFlightKey((airline), flight, timestamp);
+        uint8 statusCode = flightSuretyData.getFlightStatus(flightKey);
+
+        return statusCode;
+    }
+
 
     // Generate a request for oracles to fetch flight information
     function fetchFlightStatus(address airline, string flight, uint256 timestamp) external requireIsOperational {
@@ -390,6 +397,7 @@ contract FlightSuretyData {
     function addAirline(address airlineAddress) external;
     function addFlight(address airline, string flightName, uint256 timestamp) external;
     function updateFlight(address airline, string flightName, uint256 timestamp, uint8 statusCode) external;
+    function getFlightStatus(bytes32 flightKey) public view returns (uint8);
     function addInsurance(address insuree, bytes32 flightKey, uint256 amount) external;
     function creditInsurees(bytes32 flightKey) external;
     function payInsuree(address insuree, uint256 amount) external payable;

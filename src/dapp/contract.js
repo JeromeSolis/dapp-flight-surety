@@ -54,16 +54,43 @@ export default class Contract {
             });
     }
 
+    registerAirline(airline, callback) {
+        let self = this;
+        let payload = {
+            airline: airline
+        }
+        self.flightSuretyApp.methods
+            .registerAirline(payload.airline)
+            .send({from:self.owner}, (error, result) => {
+                callback(error, payload);
+            });
+    }
+
     buyInsurance(airline, flight, timestamp, value) {
         let self = this;
-        let insuranceAmount = this.web3.utils.toWei(value, "ether");
+        let amount = this.web3.utils.toWei(value, "ether");
 
         return new Promise((resolve, reject) => {
-            self.flightSuretyApp.methods.buyInsurance(airline, flight, timestamp)
-            .send({from:accts[10], value:insuranceAmount, gas:6721975})
+            self.flightSuretyApp.methods
+                .buyInsurance(airline, flight, timestamp)
+                .send({from:self.passengers[0], value:amount, gas:6721975})
         }).then((res) => {
             console.log(res);
             resolve("Insurance bought");
         }).catch((err) => reject(err));
     }
+
+    withdrawCreditedAmount(value) {
+        let self = this;
+        let amount = this.web3.utils.toWei(value, "ether");
+
+        return new Promise((resolve, reject) => {
+            self.flightSuretyApp.methods
+                .withdrawCreditedAmount(amount).send({from:self.passengers[0]})
+        })
+    }
+
+
+
+
 }
