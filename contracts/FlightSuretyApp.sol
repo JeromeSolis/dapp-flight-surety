@@ -27,6 +27,8 @@ contract FlightSuretyApp {
     uint8 private constant STATUS_CODE_LATE_TECHNICAL = 40;
     uint8 private constant STATUS_CODE_LATE_OTHER = 50;
 
+    uint256 public constant REGISTRATION_FEE = 1 ether;
+
     address private contractOwner;          // Account used to deploy contract
     address[] votes = new address[](0);
     bool private operational;
@@ -125,7 +127,8 @@ contract FlightSuretyApp {
         return flightSuretyData.isFundedAirline(airline);
     }
 
-    function isRegisteredFlight(bytes32 flightKey) public view returns (bool) {
+    function isRegisteredFlight(address airline, string flight, uint256 timestamp) public view returns (bool) {
+        bytes32 flightKey = getFlightKey(airline, flight, timestamp);
         return flightSuretyData.isRegisteredFlight(flightKey);
     }
 
@@ -141,6 +144,10 @@ contract FlightSuretyApp {
 
     function getAirline(address airlineAddress) public view returns (uint256 airlineId, bool isRegistered, bool isFunded) {
         return flightSuretyData.getAirline(airlineAddress);
+    }
+
+    function getOracleRegistrationFee() public view returns (uint256) {
+        return REGISTRATION_FEE;
     }
 
     /********************************************************************************************/
@@ -198,7 +205,7 @@ contract FlightSuretyApp {
     *
     */  
     function registerFlight(string flightName, uint256 timestamp) external requireIsOperational requireIsAuthorizedCaller {
-        require(timestamp > block.timestamp, "Flight has already departed");
+        // require(timestamp > block.timestamp, "Flight has already departed");
 
         flightSuretyData.addFlight(msg.sender, flightName, timestamp);
     }
@@ -241,7 +248,7 @@ contract FlightSuretyApp {
 
         require(msg.value <= 1 ether, "Payment is too high");
         require(isFundedAirline(airline), "Airline is not funded");
-        require(isRegisteredFlight(flightKey), "Flight is not registered");
+        require(isRegisteredFlight(airline, flight, timestamp), "Flight is not registered");
     
         address(flightSuretyData).transfer(msg.value);
         flightSuretyData.addInsurance(msg.sender, flightKey, msg.value);
@@ -260,7 +267,6 @@ contract FlightSuretyApp {
     uint8 private nonce = 0;    
 
     // Fee to be paid when registering oracle
-    uint256 public constant REGISTRATION_FEE = 1 ether;
 
     // Number of oracles that must respond for valid status
     uint256 private constant MIN_RESPONSES = 3;

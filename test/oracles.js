@@ -57,6 +57,10 @@ contract('Oracles', async (accounts) => {
     // ARRANGE
     let flight = 'ND1309'; // Course number
     let timestamp = Math.floor(Date.now() / 1000);
+    await flightSuretyApp.registerFlight(flight, timestamp, {from:firstAirline});
+    let status = await flightSuretyApp.isRegisteredFlight(firstAirline, flight, timestamp);
+
+    assert(status, true, "Flight wasn't properly registered");
 
     // Submit a request for oracles to get status information for a flight
     await flightSuretyApp.fetchFlightStatus(firstAirline, flight, timestamp);
@@ -69,7 +73,7 @@ contract('Oracles', async (accounts) => {
     for(let a=1; a<TEST_ORACLES_COUNT; a++) {
 
       // Get oracle information
-      let oracleIndexes = await flightSuretyApp.getMyIndexes.call({ from: accounts[a]});
+      let oracleIndexes = await flightSuretyApp.getMyIndexes.call({from:accounts[a]});
       for(let idx=0;idx<3;idx++) {
 
         try {
