@@ -6,7 +6,7 @@ export default class Contract {
     constructor(network, callback) {
 
         let config = Config[network];
-        this.web3 = new Web3(new Web3.providers.WebsocketProvider(config.url.replace('http','ws')));
+        this.web3 = new Web3(new Web3.providers.HttpProvider(config.url));
         this.flightSuretyApp = new this.web3.eth.Contract(FlightSuretyApp.abi, config.appAddress);
         this.initialize(callback);
         this.owner = null;
@@ -30,31 +30,8 @@ export default class Contract {
             while(this.passengers.length < 5) {
                 this.passengers.push(accts[counter++]);
             }
-            // Register airlines
-
-
-            // Register flights
-            // flightTimestamp = new Date('2022-01-21 05:30:00');
-            self.flightSuretyApp.methods.registerFlight({
-                airline:accts[0],
-                flight:'AC8449',
-                timestamp:Math.floor((new Date('2022-01-21 05:30:00')).getTime()/1000)
-            }).send({from:accts[0], gas:self.gas});
-
-            self.flightSuretyApp.methods.registerFlight({
-                airline:accts[0],
-                flight:'AC481',
-                timestamp:Math.floor((new Date('2022-01-21 06:00:00')).getTime()/1000)
-            }).send({from:accts[0], gas:self.gas});
-
-            self.flightSuretyApp.methods.registerFlight({
-                airline:accts[0],
-                flight:'AC485',
-                timestamp:Math.floor((new Date('2022-01-21 06:30:00')).getTime()/1000)
-            }).send({from:accts[0], gas:self.gas});
 
             if (error) console.log(error);
-
             callback();
         });
     }
@@ -66,30 +43,27 @@ export default class Contract {
         .call({from:self.owner}, callback);
     }
 
-    fetchFlightStatus(flight, callback) {
+    registerAirline(airline, from, callback) {
         let self = this;
         let payload = {
-            airline: self.airlines[0],
-            flight: flight,
-            timestamp: Math.floor(Date.now() / 1000)
-        } 
+            airline: airline,
+            from: from
+        }
         self.flightSuretyApp.methods
-            .fetchFlightStatus(payload.airline, payload.flight, payload.timestamp)
-            .send({ from: self.owner}, (error, result) => {
+            .registerAirline(payload.airline)
+            .send({from:payload.from, gas:self.gas}, (error, result) => {
                 callback(error, payload);
         });
     }
 
-    registerAirline(airline, callback) {
+    getRegisteredStatus(airline, callback) {
         let self = this;
         let payload = {
-            airline: airline
+            airline:airline
         }
         self.flightSuretyApp.methods
-            .registerAirline(payload.airline)
-            .send({from:self.owner}, (error, result) => {
-                callback(error, payload);
-        });
+            .isRegisteredAirline(payload.airline)
+            .call({from:self.owner}, callback);
     }
 
     fundAirline(airline, callback) {
@@ -101,39 +75,95 @@ export default class Contract {
         }
         self.flightSuretyApp.methods
             .fundAirline()
-            .send({from:payload.airline, value:payload.payment, gas:self.gas}, (error, result) => {
+            .send({from:payload.airline, value:payload.payment, gas:self.gas}, callback);
+    }
+
+    getFundedStatus(airline, callback) {
+        let self = this;
+        let payload = {
+            airline:airline
+        }
+        self.flightSuretyApp.methods
+            .isFundedAirline(payload.airline)
+            .call({from:self.owner}, callback);
+    }
+
+    registerFlight(airline, flight, timestamp, callback) {
+        let self = this;
+        let date = new Date(timestamp);
+        let payload = {
+            airline:airline,
+            flight:flight,
+            timestamp:Math.floor(date.getTime()/1000)
+        }
+        self.flightSuretyApp.methods
+            .registerFlight(payload.flight, payload.timestamp)
+            .send({from:airline, gas:self.gas}, (error, result) => {
+                callback(error, payload);
+            })
+    }
+
+    fetchFlightStatus(airline, flight, timestamp, callback) {
+        let self = this;
+        let date = new Date(timestamp);
+        let payload = {
+            airline: airline,
+            flight: flight,
+            timestamp: Math.floor(date.getTime()/1000)
+        } 
+
+        self.flightSuretyApp.methods
+            .fetchFlightStatus(payload.airline, payload.flight, payload.timestamp)
+            .send({from:self.owner, gas:self.gas}, (error, result) => {
                 callback(error, payload);
         });
     }
 
-    buyInsurance(airline, flight, timestamp, value, callback) {
+    getFlightStatus(airline, flight, timestamp, callback) {
+        let self = this;
+        let date = new Date(timestamp);
+        let payload = {
+            airline: airline,
+            flight: flight,
+            timestamp: Math.floor(date.getTime()/1000)
+        } 
+        
+        self.flightSuretyApp.methods
+            .getFlightStatus(payload.airline, payload.flight, payload.timestamp)
+            .call({from:self.owner}, callback);
+    }
+
+    buyInsurance(airline, flight, timestamp, passenger, value, callback) {
         let self = this;
         let amount = self.web3.utils.toWei(value, "ether");
+        let date = new Date(timestamp);
 
         let payload = {
             airline:airline,
             flight:flight,
-            timestamp:timestamp,
+            timestamp:Math.floor(date.getTime()/1000),
+            passenger: passenger,
             payment:amount
         };
 
         self.flightSuretyApp.methods
             .buyInsurance(payload.airline, payload.flight, payload.timestamp)
-            .send({from:self.passengers[0], value:amount, gas:self.gas}, (error, result) => {
+            .send({from:payload.passenger, value:payload.payment, gas:self.gas}, (error, result) => {
                 callback(error, payload);
         })
     }
 
-    withdrawCreditedAmount(value, callback) {
+    withdrawCreditedAmount(passenger, value, callback) {
         let self = this;
         let amount = self.web3.utils.toWei(value, "ether");
 
         let payload = {
+            passenger:passenger,
             amount:amount
         }
 
         self.flightSuretyApp.methods
-            .withdrawCreditedAmount(payload.amount).send({from:self.passengers[0]}, (error, result) => {
+            .withdrawCreditedAmount(payload.amount).send({from:payload.passenger, gas:self.gas}, (error, result) => {
                 callback(error, payload);
         })
     }

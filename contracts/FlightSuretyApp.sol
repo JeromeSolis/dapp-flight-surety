@@ -192,11 +192,12 @@ contract FlightSuretyApp {
         uint256 registrationFee = flightSuretyData.getAirlineRegistrationFee();
         require(msg.value >= registrationFee, "Payment doesn't meet minimum value");
 
-        address(flightSuretyData).transfer(msg.value);
         flightSuretyData.setAirlineFunded(msg.sender);
         emit AirlineFunded(msg.sender);
 
         setAuthorizedCaller(msg.sender);
+        address(flightSuretyData).transfer(msg.value);
+
     }
 
 
@@ -214,7 +215,7 @@ contract FlightSuretyApp {
     * @dev Called after oracle has updated flight status
     *
     */  
-    function processFlightStatus(address airline, string memory flight, uint256 timestamp, uint8 statusCode) internal requireIsOperational requireIsAuthorizedCaller {
+    function processFlightStatus(address airline, string memory flight, uint256 timestamp, uint8 statusCode) internal requireIsOperational {
         bytes32 flightKey = getFlightKey(airline, flight, timestamp);
 
         flightSuretyData.updateFlight(airline, flight, timestamp, statusCode);

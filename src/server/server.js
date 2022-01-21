@@ -5,7 +5,7 @@ import express from 'express';
 
 
 let config = Config['localhost'];
-let w3 = new Web3(new Web3.providers.WebsocketProvider(config.url.replace('http', 'ws')));
+let w3 = new Web3(new Web3.providers.WebsocketProvider(config.url.replace('http','ws')));
 w3.eth.defaultAccount = w3.eth.accounts[0];
 const gasPrice = 20000000000;
 const gas = 6721975;
@@ -31,55 +31,54 @@ let status = [
 let REGISTRATION_FEE = 0;
 let accounts = [];
 let oracles = [];
-let flights = [];
 
 // Initialization
-flightSuretyApp.methods.getOracleRegistrationFee().call({from:w3.eth.defaultAccount}).then((res) => {
-  REGISTRATION_FEE = res;
+flightSuretyApp.methods.getOracleRegistrationFee().call({from:w3.eth.defaultAccount}).then((result) => {
+  REGISTRATION_FEE = result;
   console.log(REGISTRATION_FEE);
 })
 
-w3.eth.getAccounts().then((res, err) => {
-  accounts = res;
+w3.eth.getAccounts().then((result, error) => {
+  accounts = result;
   console.log(accounts);
-  if (err) console.log(err);
-  for (let i = 0; i < accounts.length; i++) {
+  if (error) console.log(error);
+  for (let i = 20; i < 20 + ORACLE_NUMBER; i++) {
     oracles.push(accounts[i]);
     flightSuretyApp.methods.registerOracle().send({from:accounts[i], value: REGISTRATION_FEE, gas:gas}).then(() => {
-      flightSuretyApp.methods.getMyIndexes().call({from:accounts[i]}).then((res, err) => {
-        console.log(res);
+      flightSuretyApp.methods.getMyIndexes().call({from:accounts[i]}).then((result, error) => {
+        console.log(result);
       })
     })
-    console.log(oracles[i]);
   }
+  console.log(oracles);
 });
 
-flightSuretyApp.events.OracleRequest({fromBlock:0}, function (error, event) {
+flightSuretyApp.events.OracleRequest((error, event) => {
     if (error) console.log(error)
     console.log(event)
 
     // Define a random oracle response
-    for (let i=0; i<accounts.length; i++) {
-      flightSuretyApp.methods.getMyIndexes().call({from:accounts[i]}).then((res, err) => {
+    let response = status[0];
+    let dice = Math.random();
+
+    if (dice <= 0.01) response = status[0];
+    else if (dice <= 0.4) response = status[1];
+    else if (dice <= 0.5) response = status[2];
+    else if (dice <= 0.8) response = status[3];
+    else if (dice <= 0.9) response = status[4];
+    else response = status[5];
+
+    for (let i=0; i<oracles.length; i++) {
+      flightSuretyApp.methods.getMyIndexes().call({from:oracles[i]}).then((res, err) => {
         for (let j=0; j<res.length; j++) {
           if (res[j] == event.returnValues.index) {
-            let response = status[0];
-            let dice = Math.random();
-
-            if (dice <= 0.01) response = status[0];
-            else if (dice <= 0.4) response = status[1];
-            else if (dice <= 0.5) response = status[2];
-            else if (dice <= 0.8) response = status[3];
-            else if (dice <= 0.9) response = status[4];
-            else response = status[5];
-
             flightSuretyApp.methods.submitOracleResponse(
               res[j], 
               event.returnValues.airline, 
               event.returnValues.flight, 
               event.returnValues.timestamp, 
               response
-            ).send({from:accounts[i], gas:gas}).then((res, err) => {
+            ).send({from:oracles[i], gas:gas}).then((res, err) => {
               if (err) console.log(err);
             })
             break;

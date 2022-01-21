@@ -13,10 +13,11 @@ const Web3 = require('web3');
  * and https://ethereum.stackexchange.com/questions/67487/solidity-truffle-call-contract-function-in-migration-file
  */
 module.exports = async function(deployer, network, accounts) {
-    let firstAirline = accounts[0];
+    let contractOwner = accounts[0];
+    let firstAirline = accounts[1];
     let fund = Web3.utils.toWei("10","ether");
-    await deployer.deploy(FlightSuretyData, firstAirline, {from:firstAirline, value:fund});
-    await deployer.deploy(FlightSuretyApp, FlightSuretyData.address);
+    await deployer.deploy(FlightSuretyData, firstAirline, {from:contractOwner, value:fund});
+    await deployer.deploy(FlightSuretyApp, FlightSuretyData.address, {from:contractOwner});
     
     let dataContract = await FlightSuretyData.deployed();
     await dataContract.setAuthorizedCaller(FlightSuretyApp.address);

@@ -21,10 +21,84 @@
 
     <main class="container">
 
-        <div id="display-wrapper" class="top-20">
-        </div>
-        <div class="row top-20">
-            <label class="form">Flight</label> <input type="text" id="flight-number"> <btn class="btn btn-primary" id="submit-oracle">Submit to Oracles</btn>
+        <div class="row">
+            <div class="column">
+
+                <div id="display-wrapper" class="top-20">
+                </div>
+
+            </div>
+            <div class="column">
+
+                <h4>Register Airline</h4>
+
+                <div class="row top-20">
+                    <label class="form">From Airline</label> 
+                    <input type="text" id="register-airline-from-address"> 
+                </div>
+
+                <div class="row top-20">
+                    <label class="form">Register Airline</label> 
+                    <input type="text" id="register-airline-address"> 
+                </div>     
+
+                <div class="row top-20">
+                    <btn class="btn btn-primary" id="register-airline">Register Airline</btn>
+                    &emsp;
+                    <btn class="btn btn-primary" id="fund-airline">Fund Airline</btn>    
+                </div>
+                <br/>
+                <div class="row top-2o">
+                    <btn class="btn btn-primary" id="registered-status">Registered Status</btn>
+                    &emsp;
+                    <btn class="btn btn-primary" id="funded-status">Funded Status</btn>
+                </div>
+
+                <br/>
+                <h4>Register Flight</h4>
+
+                <div class="row top-20">
+                    <label class="form">Flight Airline</label> 
+                    <input type="text" id="flight-airline-address"> 
+                </div>
+
+                <div class="row top-20">
+                    <label class="form"> Flight Number</label> 
+                    <input type="text" id="flight-id"> 
+                </div>
+
+                <div class="row top-20">
+                    <label class="form"> Flight Timestamp</label> 
+                    <input type="text" id="flight-timestamp"> 
+                </div>
+
+                <div class="row top-20">
+                    <btn class="btn btn-primary" id="register-flight">Register Flight</btn>
+                    &emsp;
+                    <btn class="btn btn-primary" id="submit-oracle">Submit to Oracles</btn>
+                    &emsp;
+                    <btn class="btn btn-primary" id="get-status-code">Get Flight Status Code</btn>
+                </div>
+
+                <br/>
+                <h4>Buy Insurance</h4>
+
+                <div class="row top-20">
+                    <label class="form"> Passenger</label> 
+                    <input type="text" id="passenger"> 
+                </div>
+
+                <div class="row top-20">
+                    <label class="form"> Insurance Amount</label> 
+                    <input type="text" id="insurance-amount"> 
+                </div>
+
+                <div class="row top-20">
+                    <btn class="btn btn-primary" id="buy-insurance">Buy Insurance</btn>
+                    &emsp;
+                    <btn class="btn btn-primary" id="withdraw-credits">Withdraw Credits</btn>
+                </div>                
+            </div>
         </div>
     </main>
 
