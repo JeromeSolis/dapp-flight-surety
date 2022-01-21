@@ -75,7 +75,9 @@ export default class Contract {
         }
         self.flightSuretyApp.methods
             .fundAirline()
-            .send({from:payload.airline, value:payload.payment, gas:self.gas}, callback);
+            .send({from:payload.airline, value:payload.payment, gas:self.gas}, (error, result) => {
+                callback(error, payload);
+            });
     }
 
     getFundedStatus(airline, callback) {
