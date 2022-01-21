@@ -42,7 +42,7 @@ import './flightsurety.css';
 
             contract.fundAirline(airline, (error, result) => {
                 console.log(error, result);
-                display('Airlines', 'Fund airlines', [{label: 'Fund Airline', error:error, value:result}]);
+                display('Airlines', 'Fund airlines', [{label: 'Fund Airline', error:error, value:result.airline + ' ' + result.payment}]);
             })
         })
 
